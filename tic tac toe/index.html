@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ARTIFICIAL INTELLIGENCE S21 — Tic Tac Toe</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1: #020617;
+    --bg2: #06102a;
+    --glass: rgba(255,255,255,0.06);
+    --neon-a: #00f0ff;
+    --neon-b: #ff00ff;
+    --accent: #7effa3;
+    --glass-border: rgba(255,255,255,0.08);
+    --glass-glow: 0 8px 40px rgba(0,240,255,0.06);
+    --tile-size: min(12vmin, 72px);
+    --board-gap: 8px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: radial-gradient(1200px 600px at 10% 20%, rgba(0,240,255,0.03), transparent),
+                radial-gradient(800px 400px at 90% 80%, rgba(255,0,255,0.02), transparent),
+                linear-gradient(180deg,var(--bg1),var(--bg2));
+    color:#e9f7ff;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:20px;
+    min-height:100vh;
+  }
+
+  .container{
+    width:100%;
+    max-width:1100px;
+    display:grid;
+    grid-template-columns: 420px 1fr;
+    gap:24px;
+    align-items:start;
+    padding:22px;
+  }
+
+  /* Left panel - info and controls */
+  .panel{
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:16px;
+    padding:20px;
+    border:1px solid var(--glass-border);
+    backdrop-filter: blur(8px) saturate(120%);
+    box-shadow: var(--glass-glow);
+    position:relative;
+    overflow:hidden;
+  }
+
+  .panel:before{
+    content:"";
+    position:absolute;
+    inset: -40%;
+    background: conic-gradient(from 120deg at 40% 20%, rgba(0,240,255,0.06), rgba(255,0,255,0.06), rgba(0,240,255,0.03));
+    transform: rotate(10deg);
+    z-index:0;
+  }
+
+  .panel *{position:relative; z-index:1}
+
+  .title{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:8px;
+  }
+  .title .logo{
+    font-family:Orbitron, monospace;
+    font-weight:700;
+    color:var(--neon-a);
+    text-shadow: 0 0 12px rgba(0,240,255,0.45), 0 0 24px rgba(0,240,255,0.12);
+    padding:8px 12px;
+    border-radius:12px;
+    border:1px solid rgba(0,240,255,0.08);
+    background: linear-gradient(180deg, rgba(0,240,255,0.02), rgba(255,255,255,0.01));
+  }
+  .title h1{
+    margin:0;
+    font-size:18px;
+    letter-spacing:0.6px;
+    color:#dffeff;
+  }
+
+  .meta{
+    margin-top:12px;
+    font-size:13px;
+    color:rgba(235,255,255,0.85);
+  }
+  .meta .name{
+    margin-top:8px;
+    font-weight:600;
+    color:var(--accent);
+    text-shadow:0 6px 18px rgba(126,255,163,0.06);
+  }
+
+  .controls{
+    margin-top:18px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  label.select{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.06);
+    padding:10px;
+    border-radius:10px;
+    min-width:120px;
+    text-align:center;
+    cursor:pointer;
+    user-select:none;
+    transition:all .18s ease;
+  }
+  label.select input{display:none}
+  label.select.selected{
+    border-color: rgba(126,255,163,0.22);
+    box-shadow: 0 10px 30px rgba(126,255,163,0.04);
+    transform:translateY(-2px);
+    background:linear-gradient(180deg, rgba(126,255,163,0.02), transparent);
+  }
+
+  .tog{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-size:14px;
+  }
+
+  .btn{
+    margin-top:6px;
+    background:linear-gradient(90deg,var(--neon-a),var(--neon-b));
+    color:#06101a;
+    font-weight:800;
+    padding:12px 16px;
+    border-radius:12px;
+    border:none;
+    cursor:pointer;
+    letter-spacing:0.6px;
+    box-shadow: 0 8px 36px rgba(0,0,0,0.35), 0 0 28px rgba(0,240,255,0.08);
+    transition:transform .14s ease, opacity .12s ease;
+  }
+  .btn:hover{transform:translateY(-4px)}
+  .btn.ghost{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.06);
+    color:#dffeff;
+    box-shadow:none;
+  }
+
+  /* right panel - board + stats */
+  .stage{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .hud{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+  }
+  .hud .status{
+    font-weight:700;
+    letter-spacing:0.6px;
+    color:#dffeff;
+    font-size:16px;
+  }
+  .score{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    padding:8px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,0.04);
+    display:flex;
+    gap:12px;
+  }
+
+  .board-wrap{
+    padding:18px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,0.04);
+    background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+    min-height:320px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .board{
+    display:grid;
+    gap: var(--board-gap);
+    touch-action: manipulation;
+    transition: all .18s ease;
+  }
+
+  .cell{
+    width: var(--tile-size);
+    height: var(--tile-size);
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size: calc(var(--tile-size) * 0.6);
+    font-weight:800;
+    cursor:pointer;
+    user-select:none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));
+    border:1px solid rgba(255,255,255,0.03);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5), inset 0 -6px 18px rgba(0,0,0,0.12);
+    transition: transform .12s ease, box-shadow .12s ease;
+    color:#cfeff6;
+  }
+
+  .cell:active{transform:scale(.98)}
+  .cell.x{ color: var(--neon-a); text-shadow: 0 0 10px rgba(0,240,255,0.25);}
+  .cell.o{ color: var(--neon-b); text-shadow: 0 0 10px rgba(255,0,255,0.16);}
+
+  .cell.win{
+    transform: scale(1.06);
+    box-shadow: 0 16px 44px rgba(0,0,0,0.6), 0 0 36px rgba(255,255,255,0.03);
+    outline: 2px solid rgba(255,255,255,0.028);
+    animation: pulseWin 700ms infinite alternate;
+  }
+  @keyframes pulseWin{
+    from{box-shadow: 0 16px 44px rgba(0,0,0,0.6), 0 0 36px rgba(255,255,255,0.02)}
+    to{box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 60px rgba(0,240,255,0.08)}
+  }
+
+  /* result modal */
+  .modal{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    backdrop-filter: blur(6px) saturate(120%);
+    background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.55));
+    z-index:2000;
+    padding:20px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .18s ease;
+  }
+  .modal.show{opacity:1; pointer-events:auto}
+  .modal-card{
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+    border-radius:18px;
+    padding:20px;
+    text-align:center;
+    width:min(520px,100%);
+    border:1px solid rgba(255,255,255,0.04);
+    transform: translateY(10px);
+    animation: popin .28s cubic-bezier(.2,.9,.3,1);
+  }
+  @keyframes popin{from{opacity:0; transform:translateY(18px) scale(.98)} to{opacity:1; transform:translateY(0) scale(1)}}
+
+  .result-title{
+    font-family:Orbitron, monospace;
+    font-weight:700;
+    font-size:20px;
+    margin-bottom:8px;
+    color:var(--accent);
+  }
+  .result-sub{font-size:14px; color:#dffeff; margin-bottom:12px}
+  .confetti{
+    height:60px;
+    margin-bottom:12px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* responsive */
+  @media (max-width:980px){
+    .container{grid-template-columns: 1fr; padding:16px}
+    .panel{order:2}
+    .stage{order:1}
+  }
+  @media (max-width:420px){
+    :root{--tile-size: calc(min(14vmin, 64px))}
+    .title h1{font-size:16px}
+  }
+
+  /* small flourish for neon text lines */
+  .neon-line{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:8px;
+    background: linear-gradient(90deg, rgba(0,240,255,0.03), rgba(255,0,255,0.03));
+    border:1px solid rgba(255,255,255,0.02);
+    text-shadow: 0 0 10px rgba(255,255,255,0.02);
+    font-size:13px;
+    letter-spacing:0.6px;
+  }
+
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel">
+      <div class="title">
+        <div class="logo">S21</div>
+        <div>
+          <h1>ARTIFICIAL INTELLIGENCE S21</h1>
+          <div style="font-size:12px;color:rgba(255,255,255,0.7)">Tic Tac Toe </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="neon-line">done by: A.Vishnu Prakash</div>
+        <div class="name">Guidance: DR. R. RAJA SUBRAMANIAN</div>
+      </div>
+
+      <div class="controls">
+        <div class="row">
+          <label class="select selected" data-size="3"><input type="radio" name="size" checked/> 3 × 3</label>
+          <label class="select" data-size="4"><input type="radio" name="size" /> 4 × 4</label>
+          <label class="select" data-size="5"><input type="radio" name="size" /> 5 × 5</label>
+        </div>
+
+        <div class="row" style="align-items:center;">
+          <div class="tog"><input id="aiToggle" type="checkbox" checked/> &nbsp; Play vs AI</div>
+          <div style="flex:1"></div>
+          <div class="tog">Player: <select id="playerSelect" style="margin-left:10px;padding:6px;border-radius:8px;border:none;background:rgba(255,255,255,0.03);color:#dffeff">
+            <option value="X">X</option>
+            <option value="O">O</option>
+          </select></div>
+        </div>
+
+        <div class="row">
+          <button class="btn" id="startBtn">Start Game</button>
+          <button class="btn ghost" id="resetBtn">Reset Scores</button>
+        </div>
+
+        <div style="margin-top:12px;font-size:13px;color:rgba(255,255,255,0.7)">
+          Tip: On 4×4 and 5×5 the AI uses a heuristic — it will try to win or block immediate threats. Board is responsive for mobile and desktop.
+        </div>
+
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="hud">
+        <div class="status" id="statusText">Choose settings and press Start</div>
+        <div class="score" id="scoreboard" aria-live="polite">
+          <div> X: <span id="scoreX">0</span> </div>
+          <div> O: <span id="scoreO">0</span> </div>
+          <div> Draws: <span id="scoreD">0</span> </div>
+        </div>
+      </div>
+
+      <div class="board-wrap">
+        <div class="board" id="board" role="grid" aria-label="Tic Tac Toe board">
+          <!-- cells generated dynamically -->
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn ghost" id="undoBtn" title="Undo last move">Undo</button>
+        <button class="btn ghost" id="newRoundBtn">New Round</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- result modal -->
+  <div class="modal" id="resultModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="confetti" id="confettiArea"></div>
+      <div class="result-title" id="resultTitle">Result</div>
+      <div class="result-sub" id="resultText">Player X wins!</div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+        <button class="btn" id="playAgain">Play Again</button>
+        <button class="btn ghost" id="closeModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------- Game logic ---------- */
+
+// DOM elements
+const boardEl = document.getElementById('board');
+const statusText = document.getElementById('statusText');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const newRoundBtn = document.getElementById('newRoundBtn');
+const undoBtn = document.getElementById('undoBtn');
+const playerSelect = document.getElementById('playerSelect');
+const aiToggle = document.getElementById('aiToggle');
+const scoreX = document.getElementById('scoreX');
+const scoreO = document.getElementById('scoreO');
+const scoreD = document.getElementById('scoreD');
+const resultModal = document.getElementById('resultModal');
+const resultTitle = document.getElementById('resultTitle');
+const resultText = document.getElementById('resultText');
+const playAgain = document.getElementById('playAgain');
+const closeModal = document.getElementById('closeModal');
+const selectLabels = document.querySelectorAll('.select');
+
+// state
+let size = 3;
+let winLen = 3;
+let board = [];
+let currentPlayer = 'X';
+let humanPlayer = 'X';
+let vsAI = true;
+let gameOver = true;
+let moveStack = [];
+let scores = {X:0, O:0, D:0};
+
+// helpers
+function setSelectedSize(s){
+  size = s;
+  winLen = (s === 3) ? 3 : (s === 4 ? 4 : 5);
+  document.documentElement.style.setProperty('--board-gap', size>3 ? '10px' : '8px');
+  document.documentElement.style.setProperty('--tile-size', size > 3 ? 'min(10vmin, 72px)' : 'min(12vmin, 72px)');
+  selectLabels.forEach(l => l.classList.toggle('selected', Number(l.dataset.size) === s));
+}
+
+selectLabels.forEach(l => {
+  l.addEventListener('click', () => setSelectedSize(Number(l.dataset.size)));
+});
+
+// board creation
+function createBoard(){
+  board = Array(size * size).fill(null);
+  boardEl.innerHTML = '';
+  boardEl.style.gridTemplateColumns = `repeat(${size}, auto)`;
+  boardEl.style.justifyContent = 'center';
+  for(let i=0;i<size*size;i++){
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.index = i;
+    cell.role = 'button';
+    cell.addEventListener('click', onCellClick);
+    boardEl.appendChild(cell);
+  }
+  moveStack = [];
+  gameOver = false;
+  currentPlayer = 'X';
+  statusText.textContent = `Turn: ${currentPlayer}`;
+}
+
+// click handler
+function onCellClick(e){
+  if(gameOver) return;
+  const idx = Number(e.currentTarget.dataset.index);
+  if(board[idx]) return;
+  if(vsAI && currentPlayer !== humanPlayer) return; // prevent clicking when AI's turn
+  makeMove(idx, currentPlayer);
+  if(!gameOver && vsAI && currentPlayer !== humanPlayer){
+    // if human started as O and AI is X then AI may have already moved; we check outside
+  }
+  if(!gameOver && vsAI && currentPlayer !== humanPlayer){
+    // noop
+  }
+  if(!gameOver && vsAI && currentPlayer !== humanPlayer) {
+    // noop
+  }
+}
+
+function makeMove(idx, player, record=true){
+  if(board[idx]) return;
+  board[idx] = player;
+  const cell = boardEl.querySelector(`.cell[data-index="${idx}"]`);
+  cell.textContent = player;
+  cell.classList.add(player.toLowerCase());
+  if(record) moveStack.push({idx, player});
+  // check for win/draw
+  const res = checkResult();
+  if(res.winner){
+    highlightWin(res.line);
+    endGame(res.winner);
+    return;
+  } else if(res.draw){
+    endGame('draw');
+    return;
+  }
+  // switch player
+  currentPlayer = (player === 'X') ? 'O' : 'X';
+  statusText.textContent = `Turn: ${currentPlayer}`;
+  // if vs AI and it's AI's turn -> compute and play
+  if(vsAI && currentPlayer !== humanPlayer && !gameOver){
+    setTimeout(() => aiPlay(), 260 + Math.random()*280);
+  }
+}
+
+function checkResult(){
+  // check rows, cols, diagonals for winLen contiguous same symbol
+  const N = size, L = winLen;
+  const grid = board;
+  const lines = []; // winning line indices
+  // helper to push contiguous sequences
+  function checkDirection(r0,c0,dr,dc){
+    let r=r0, c=c0, i = r* N + c;
+    const seq = [];
+    while(r>=0 && r<N && c>=0 && c<N){
+      seq.push(i);
+      r += dr; c += dc; i = r*N + c;
+    }
+    // traverse seq looking for L contiguous same
+    for(let start=0; start+L<=seq.length; start++){
+      const segment = seq.slice(start, start+L);
+      const vals = segment.map(idx => grid[idx]);
+      if(vals.every(v => v && v === vals[0])){
+        return { winner: vals[0], line: segment.slice() };
+      }
+    }
+    return null;
+  }
+  // scan rows
+  for(let r=0;r<N;r++){
+    const res = checkDirection(r,0,0,1);
+    if(res) return {winner:res.winner, line:res.line};
+  }
+  // scan cols
+  for(let c=0;c<N;c++){
+    const res = checkDirection(0,c,1,0);
+    if(res) return {winner:res.winner, line:res.line};
+  }
+  // diagonals top-left to bottom-right starting positions
+  for(let r=0;r<N;r++){
+    const res = checkDirection(r,0,1,1);
+    if(res) return {winner:res.winner, line:res.line};
+  }
+  for(let c=1;c<N;c++){
+    const res = checkDirection(0,c,1,1);
+    if(res) return {winner:res.winner, line:res.line};
+  }
+  // diagonals top-right to bottom-left
+  for(let r=0;r<N;r++){
+    const res = checkDirection(r,N-1,1,-1);
+    if(res) return {winner:res.winner, line:res.line};
+  }
+  for(let c=0;c<N-1;c++){
+    const res = checkDirection(0,c,1,-1);
+    if(res) return {winner:res.winner, line:res.line};
+  }
+
+  // draw?
+  if(board.every(cell => cell !== null)){
+    return {draw:true};
+  }
+  return {winner:null, draw:false};
+}
+
+function highlightWin(indices){
+  indices.forEach(i=>{
+    const cell = boardEl.querySelector(`.cell[data-index="${i}"]`);
+    if(cell) cell.classList.add('win');
+  });
+}
+
+function endGame(winner){
+  gameOver = true;
+  if(winner === 'draw' || winner === 'Draw'){
+    statusText.textContent = `It's a draw!`;
+    scores.D++;
+    scoreD.textContent = scores.D;
+    showResultModal('Draw', 'No one wins — it\'s a draw.');
+  } else {
+    statusText.textContent = `${winner} wins!`;
+    scores[winner]++;
+    if(winner === 'X') scoreX.textContent = scores.X;
+    if(winner === 'O') scoreO.textContent = scores.O;
+    showResultModal(`${winner} Wins`, `Player ${winner} wins the round!`);
+  }
+}
+
+/* ---------- AI ---------- */
+
+function aiPlay(){
+  if(gameOver) return;
+  if(size === 3){
+    const best = minimaxDecision(board, currentPlayer);
+    makeMove(best.index, currentPlayer);
+  } else {
+    // heuristic: 1) winning move 2) block opponent's win 3) center-ish 4) random best
+    const idx = heuristicMove();
+    makeMove(idx, currentPlayer);
+  }
+}
+
+// heuristic for larger boards
+function heuristicMove(){
+  const avail = board.map((v,i)=>v?null:i).filter(i=>i!==null);
+  // check win
+  for(const i of avail){
+    const copy = board.slice(); copy[i] = currentPlayer;
+    if(checkResultFromBoard(copy).winner === currentPlayer) return i;
+  }
+  // block opponent
+  const opp = currentPlayer === 'X' ? 'O' : 'X';
+  for(const i of avail){
+    const copy = board.slice(); copy[i] = opp;
+    if(checkResultFromBoard(copy).winner === opp) return i;
+  }
+  // prefer center and near-center positions
+  const centerIdx = Math.floor((size*size)/2);
+  const near = [centerIdx];
+  // neighbors
+  const r = Math.floor(centerIdx/size), c = centerIdx % size;
+  const neigh = [
+    (r-1)*size+(c), (r+1)*size+(c),
+    r*size+(c-1), r*size+(c+1)
+  ].filter(i => i>=0 && i < size*size);
+  near.push(...neigh);
+  for(const i of near){
+    if(board[i] === null) return i;
+  }
+  // fallback random among best-scored moves (score simple: count potential lines)
+  let best = null, bestScore = -Infinity;
+  for(const i of avail){
+    const score = moveScore(i, currentPlayer);
+    if(score > bestScore){ bestScore = score; best = i; }
+  }
+  return best ?? avail[Math.floor(Math.random()*avail.length)];
+}
+
+function moveScore(i, player){
+  // naive scoring: number of possible contiguous segments of length winLen that include i and are not blocked
+  let score = 0;
+  const drs = [[0,1],[1,0],[1,1],[1,-1]];
+  for(const [dr,dc] of drs){
+    // generate line positions that include i
+    const r0 = Math.floor(i/size), c0 = i % size;
+    // shift window so i is at each position in window length winLen
+    for(let offset=0; offset<winLen; offset++){
+      const startR = r0 - dr*offset;
+      const startC = c0 - dc*offset;
+      let ok = true, filledByOpp = false;
+      for(let k=0;k<winLen;k++){
+        const rr = startR + dr*k, cc = startC + dc*k;
+        if(rr<0||rr>=size||cc<0||cc>=size){ ok=false; break; }
+        const val = board[rr*size+cc];
+        if(val && val !== player){ filledByOpp = true; break;}
+      }
+      if(ok && !filledByOpp) score++;
+    }
+  }
+  return score;
+}
+
+function checkResultFromBoard(b){
+  const old = board;
+  board = b;
+  const res = checkResult();
+  board = old;
+  return res;
+}
+
+/* ---------- Minimax for 3x3 ---------- */
+
+function minimaxDecision(b, player){
+  // returns {index,score}
+  const avail = b.map((v,i)=>v?null:i).filter(i=>i!==null);
+  let bestMove = null;
+  let bestScore = -Infinity;
+  for(const i of avail){
+    const nb = b.slice(); nb[i] = player;
+    const s = minimax(nb, false, player);
+    if(s > bestScore){ bestScore = s; bestMove = i; }
+  }
+  return {index: bestMove, score: bestScore};
+}
+
+function minimax(b, isMaximizing, aiPlayer){
+  const res = checkResultFromBoardForPlayer(b);
+  if(res.winner){
+    if(res.winner === aiPlayer) return 10;
+    if(res.winner === 'draw') return 0;
+    return -10;
+  }
+  const avail = b.map((v,i)=>v?null:i).filter(i=>i!==null);
+  let best = isMaximizing ? -Infinity : Infinity;
+  for(const i of avail){
+    const nb = b.slice();
+    nb[i] = isMaximizing ? aiPlayer : (aiPlayer==='X'?'O':'X');
+    const val = minimax(nb, !isMaximizing, aiPlayer);
+    if(isMaximizing) best = Math.max(best, val);
+    else best = Math.min(best, val);
+  }
+  return best;
+}
+function checkResultFromBoardForPlayer(b){
+  const saved = board;
+  board = b;
+  const res = checkResult();
+  board = saved;
+  if(res.winner) return {winner: res.winner};
+  if(res.draw) return {winner: 'draw'};
+  return {winner: null};
+}
+
+/* ---------- UI / Controls ---------- */
+
+startBtn.addEventListener('click', ()=>{
+  vsAI = aiToggle.checked;
+  humanPlayer = playerSelect.value;
+  setSelectedSize(size);
+  createBoard();
+  // if AI starts
+  if(vsAI && humanPlayer !== currentPlayer){
+    setTimeout(() => aiPlay(), 300);
+  }
+  statusText.textContent = `Turn: ${currentPlayer}`;
+});
+
+resetBtn.addEventListener('click', ()=>{
+  scores = {X:0,O:0,D:0};
+  scoreX.textContent = 0;
+  scoreO.textContent = 0;
+  scoreD.textContent = 0;
+});
+
+newRoundBtn.addEventListener('click', ()=>{
+  createBoard();
+});
+
+undoBtn.addEventListener('click', ()=>{
+  if(moveStack.length === 0 || gameOver) return;
+  // undo last two moves if vsAI to keep human turn, else single undo
+  const steps = (vsAI) ? Math.min(2, moveStack.length) : 1;
+  for(let i=0;i<steps;i++){
+    const m = moveStack.pop();
+    if(!m) break;
+    board[m.idx] = null;
+    const cell = boardEl.querySelector(`.cell[data-index="${m.idx}"]`);
+    if(cell){ cell.textContent = ''; cell.classList.remove('x','o','win'); }
+  }
+  gameOver = false;
+  currentPlayer = moveStack.length ? moveStack[moveStack.length-1].player === 'X' ? 'O' : 'X' : 'X';
+  statusText.textContent = `Turn: ${currentPlayer}`;
+});
+
+// modal controls
+function showResultModal(title, text){
+  resultTitle.textContent = title;
+  resultText.textContent = text;
+  resultModal.classList.add('show');
+  resultModal.setAttribute('aria-hidden','false');
+  // confetti
+  spawnConfetti();
+}
+playAgain.addEventListener('click', ()=>{
+  resultModal.classList.remove('show');
+  resultModal.setAttribute('aria-hidden','true');
+  createBoard();
+});
+closeModal.addEventListener('click', ()=>{
+  resultModal.classList.remove('show');
+  resultModal.setAttribute('aria-hidden','true');
+});
+
+// click outside to close
+resultModal.addEventListener('click', (e)=>{ if(e.target === resultModal){ resultModal.classList.remove('show'); }});
+
+// initial setup
+setSelectedSize(3);
+
+/* ---------- confetti (small) ---------- */
+function spawnConfetti(){
+  const area = document.getElementById('confettiArea');
+  area.innerHTML = '';
+  const count = 22;
+  for(let i=0;i<count;i++){
+    const el = document.createElement('div');
+    el.style.position = 'absolute';
+    el.style.width = `${6+Math.random()*12}px`;
+    el.style.height = `${6+Math.random()*12}px`;
+    el.style.left = `${Math.random()*100}%`;
+    el.style.top = `${Math.random()*20}%`;
+    el.style.opacity = String(0.9 + Math.random()*0.2);
+    el.style.transform = `rotate(${Math.random()*360}deg)`;
+    el.style.background = Math.random()>0.5 ? 'linear-gradient(180deg, rgba(0,240,255,1), rgba(126,255,163,0.9))' : 'linear-gradient(180deg, rgba(255,0,255,1), rgba(254,192,255,0.9))';
+    el.style.borderRadius = `${Math.random()*40}%`;
+    el.style.willChange = 'transform, top, left, opacity';
+    el.style.boxShadow = '0 6px 20px rgba(0,0,0,0.35)';
+    area.appendChild(el);
+    // animate
+    const animDur = 1400 + Math.random()*1200;
+    el.animate([
+      { transform: `translateY(0) rotate(${Math.random()*180}deg)`, opacity:1 },
+      { transform: `translateY(260px) rotate(${Math.random()*1080}deg)`, opacity:0.25 }
+    ], { duration: animDur, easing:'cubic-bezier(.2,.7,.2,1)', iterations:1, fill:'forwards' });
+  }
+}
+
+/* ---------- utilities ---------- */
+
+// For initial page load, build a default board
+createBoard();
+
+</script>
+</body>
+</html>
